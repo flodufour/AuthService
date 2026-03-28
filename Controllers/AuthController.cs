@@ -1,10 +1,11 @@
 ﻿using AuthService.DTO;
 using AuthService.Services;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using System.Reflection;
 
 namespace AuthService.Controllers
 {
-
     [ApiController]
     [Route("auth")]
     public class AuthController : ControllerBase
@@ -16,6 +17,7 @@ namespace AuthService.Controllers
             _authService = authService;
         }
 
+        [AllowAnonymous]
         [HttpPost("register")]
         public async Task<ActionResult<AuthResponse>> Register([FromBody] RegisterRequest request)
         {
@@ -30,7 +32,7 @@ namespace AuthService.Controllers
             }
         }
 
-
+        [AllowAnonymous]
         [HttpPost("login")]
         public async Task<ActionResult<AuthResponse>> Login([FromBody] LoginRequest request)
         {
@@ -72,5 +74,17 @@ namespace AuthService.Controllers
                 return BadRequest(new { message = ex.Message });
             }
         }
+
+        [AllowAnonymous]
+        [HttpGet("version")]
+        public IActionResult GetVersion()
+        {
+            var version = Assembly.GetExecutingAssembly()
+                .GetCustomAttribute<AssemblyInformationalVersionAttribute>()?
+                .InformationalVersion;
+
+            return Ok(new { version });
+        }
     }
+
 }
