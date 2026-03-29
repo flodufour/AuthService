@@ -3,22 +3,23 @@ using AuthService.DTO;
 using AuthService.Models;
 using AuthService.Security;
 using Microsoft.EntityFrameworkCore;
+using AuthService.Interfaces;
 
 namespace AuthService.Services
 {
 
-    public class AuthService
+    public class AuthManager : IAuthManager
     {
         private readonly AppDbContext _context;
-        private readonly HashingService _hashingService;
-        private readonly TokenService _tokenService;
-        private readonly RefreshTokenService _refreshTokenService;
+        private readonly IHashingService _hashingService;
+        private readonly ITokenService _tokenService;
+        private readonly IRefreshTokenService _refreshTokenService;
 
-        public AuthService(
+        public AuthManager(
             AppDbContext context,
-            HashingService hashingService,
-            TokenService tokenService,
-            RefreshTokenService refreshTokenService)
+            IHashingService hashingService,
+            ITokenService tokenService,
+            IRefreshTokenService refreshTokenService)
         {
             _context = context;
             _hashingService = hashingService;
@@ -108,7 +109,7 @@ namespace AuthService.Services
 
             return await accessToken;
         }
-
+        
         public async Task LogoutAsync(LogoutRequest request)
         {
             await _refreshTokenService.LogoutAsync(request.RefreshToken);

@@ -10,9 +10,9 @@ namespace AuthService.Controllers
     [Route("auth")]
     public class AuthController : ControllerBase
     {
-        private readonly AuthService.Services.AuthService _authService;
+        private readonly AuthService.Services.AuthManager _authService;
 
-        public AuthController(AuthService.Services.AuthService authService)
+        public AuthController(AuthService.Services.AuthManager authService)
         {
             _authService = authService;
         }

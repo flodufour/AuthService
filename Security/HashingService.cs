@@ -1,6 +1,8 @@
-﻿namespace AuthService.Security
+﻿using AuthService.Interfaces;
+
+namespace AuthService.Security
 {
-    public class HashingService
+    public class HashingService : IHashingService
     {
         public string HashPassword(string password)
             => BCrypt.Net.BCrypt.HashPassword(password);

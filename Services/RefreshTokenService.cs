@@ -3,11 +3,12 @@ using System.Text;
 using AuthService.Data;
 using AuthService.Models;
 using Microsoft.EntityFrameworkCore;
+using AuthService.Interfaces;
 
 namespace AuthService.Services
 {
 
-    public class RefreshTokenService
+    public class RefreshTokenService : IRefreshTokenService
     {
         private readonly AppDbContext _context;
 

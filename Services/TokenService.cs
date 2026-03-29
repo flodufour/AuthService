@@ -2,19 +2,20 @@
 using AuthService.Models;
 using AuthService.Security;
 using AuthService.Services;
+using AuthService.Interfaces;
 
 namespace AuthService.Services
 {
-    public class TokenService
+    public class TokenService : ITokenService
     {
-        private readonly JwtService _jwtService;
-        private readonly TokenGenerator _tokenGenerator;
-        private readonly RefreshTokenService _refreshTokenService;
+        private readonly IJwtService _jwtService;
+        private readonly ITokenGenerator _tokenGenerator;
+        private readonly IRefreshTokenService _refreshTokenService;
 
         public TokenService(
-            JwtService jwtService,
-            TokenGenerator tokenGenerator,
-            RefreshTokenService refreshTokenService)
+            IJwtService jwtService,
+            ITokenGenerator tokenGenerator,
+            IRefreshTokenService refreshTokenService)
         {
             _jwtService = jwtService;
             _tokenGenerator = tokenGenerator;

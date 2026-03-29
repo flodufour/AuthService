@@ -1,4 +1,5 @@
 using AuthService.Data;
+using AuthService.Interfaces;
 using AuthService.Security;
 using AuthService.Services;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
@@ -62,13 +63,12 @@ builder.Services.AddDbContext<AppDbContext>(options =>
 );
 
 
-builder.Services.AddScoped<AuthService.Services.AuthService>();
-builder.Services.AddScoped<TokenService>();
-builder.Services.AddScoped<RefreshTokenService>();
-builder.Services.AddScoped<JwtService>();
-builder.Services.AddScoped<HashingService>();
-builder.Services.AddScoped<TokenGenerator>();
-
+builder.Services.AddScoped<IHashingService, HashingService>();
+builder.Services.AddScoped<IJwtService, JwtService>();
+builder.Services.AddScoped<ITokenGenerator, TokenGenerator>();
+builder.Services.AddScoped<IRefreshTokenService, RefreshTokenService>();
+builder.Services.AddScoped<ITokenService, TokenService>();
+builder.Services.AddScoped<IAuthManager, AuthManager>();
 
 var jwtKey = builder.Configuration["Jwt:Key"];
 var key = Encoding.UTF8.GetBytes(jwtKey);
