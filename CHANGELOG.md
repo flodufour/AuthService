@@ -1,5 +1,12 @@
 ﻿# CHANGELOG
 
+## AuthService V 1.0.3 [29/03/26]
+### Added
+### FIXED
+- Cleaned up unused using directives
+- Fixed naming inconsistencies in AuthController
+- updated README.md 
+
 ## AuthService V 1.0.2 [29/03/26]
 ### Added
 - Added interfaces for the services

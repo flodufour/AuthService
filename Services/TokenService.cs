@@ -1,7 +1,4 @@
 ﻿using AuthService.DTO;
-using AuthService.Models;
-using AuthService.Security;
-using AuthService.Services;
 using AuthService.Interfaces;
 
 namespace AuthService.Services

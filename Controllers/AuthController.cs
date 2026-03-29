@@ -1,5 +1,5 @@
 ﻿using AuthService.DTO;
-using AuthService.Services;
+using AuthService.Interfaces;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using System.Reflection;
@@ -10,11 +10,11 @@ namespace AuthService.Controllers
     [Route("auth")]
     public class AuthController : ControllerBase
     {
-        private readonly AuthService.Services.AuthManager _authService;
+        private readonly IAuthManager _authManager;
 
-        public AuthController(AuthService.Services.AuthManager authService)
+        public AuthController(IAuthManager authService)
         {
-            _authService = authService;
+            _authManager = authService;
         }
 
         [AllowAnonymous]
@@ -23,7 +23,7 @@ namespace AuthService.Controllers
         {
             try
             {
-                var result = await _authService.RegisterAsync(request);
+                var result = await _authManager.RegisterAsync(request);
                 return Ok(result);
             }
             catch (Exception ex)
@@ -38,7 +38,7 @@ namespace AuthService.Controllers
         {
             try
             {
-                var result = await _authService.LoginAsync(request);
+                var result = await _authManager.LoginAsync(request);
                 return Ok(result);
             }
             catch (Exception ex)
@@ -52,7 +52,7 @@ namespace AuthService.Controllers
         {
             try
             {
-                var result = await _authService.RefreshAsync(request);
+                var result = await _authManager.RefreshAsync(request);
                 return Ok(result);
             }
             catch (Exception ex)
@@ -66,7 +66,7 @@ namespace AuthService.Controllers
         {
             try
             {
-                await _authService.LogoutAsync(request);
+                await _authManager.LogoutAsync(request);
                 return Ok(new { message = "Logged out successfully" });
             }
             catch (Exception ex)

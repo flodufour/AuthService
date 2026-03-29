@@ -1,56 +1,152 @@
-﻿# AuthService API
+﻿# AuthService
 
 AuthService is a stateless authentication service for microservices and API Gateway architectures.
 
-It handles identity, issues JWTs, and manages refresh token sessions.
+The service handles identity, issues JWT tokens, and manages refresh token sessions while delegating all business logic to external services.
 
 ---
 
-# Core Principle
+## System Overview
 
-AuthService is responsible only for identity.
+AuthService is responsible only for authentication and session management.
 
-- Authentication and session management  
-- Token issuance and validation  
-- No business logic ownership  
-- Other services trust JWT only  
-
----
-
-# System Overview
-
-- User registers with email + password  
-- Password is hashed using BCrypt  
-- Login returns JWT + refresh token  
-- JWT is used for API access  
-- Refresh token renews sessions  
+1. User registers with email and password  
+2. Password is hashed using BCrypt  
+3. User logs in with credentials  
+4. JWT + refresh token are issued  
+5. JWT is used for API access  
+6. Refresh token is used to renew sessions  
+7. Logout revokes refresh tokens  
 
 ---
 
-# Architecture
+## System Responsibilities
 
-AuthService is fully independent and can be used behind an API Gateway.
+- Authentication (register / login)
+- JWT token issuance and validation
+- Refresh token lifecycle management
+- Token rotation and reuse detection
+- Stateless identity handling
 
 ---
 
-# Stack
+## Architecture
+
+AuthService is designed as an independent service used behind an API Gateway.
+
+### API Gateway Responsibilities
+
+- Request routing  
+- JWT validation  
+- Rate limiting  
+- Centralized logging  
+
+### AuthService Responsibilities
+
+- Identity management  
+- Token generation  
+- Refresh token management  
+- Security enforcement  
+
+---
+
+## Technology Stack
 
 - ASP.NET Core Web API  
 - Entity Framework Core  
 - MySQL  
-- JWT authentication (stateless)  
+- JWT authentication  
+- BCrypt password hashing  
 
 ---
 
-# Project Structure
+## Software Architecture
 
-AuthService/
+The project follows a layered clean architecture approach.
+
+### Core Layer (`core/` equivalent: Services + Domain logic)
+
+Contains business logic independent of infrastructure:
+- Authentication logic
+- Token generation logic
+- Refresh token handling logic
+- Session management
+
+---
+
+### Interfaces Layer (`interfaces/`)
+
+All services expose interfaces defined in a dedicated folder:
+
+- `IAuthManager`
+- `ITokenService`
+- `IRefreshTokenService`
+- `IHashingService`
+- `IJwtService`
+- `ITokenService`
+These interfaces allow implementations to be replaced without affecting higher-level logic.
+
+---
+
+### Implementation Layer (`Services/`)
+
+Concrete implementations of interfaces:
+
+- `AuthManager`
+- `TokenService`
+- `RefreshTokenService`
+
+Responsible for actual authentication workflows and token handling.
+
+---
+
+### Data Layer (`Data/`)
+
+- `AppDbContext`
+- Entity Framework Core configuration
+- Database access logic
+
+---
+
+### Security Layer (`Security/`)
+
+Handles low-level security operations:
+
+- JWT generation and validation (`JwtService`)
+- Password hashing (`HashingService`)
+- Token utilities (`TokenGenerator`)
+
+---
+
+### Controllers Layer (`Controllers/`)
+
+- `AuthController`
+Handles HTTP endpoints:
+- Register
+- Login
+- Refresh token
+- Logout
+
+---
+
+## Project Structure
+
+<pre>AuthService/
 │
 ├─ Controllers/
 │   └─ AuthController.cs
 │
+├─ Interfaces/
+│   ├─ IAuthManager.cs
+│   ├─ ITokenService.cs
+│   ├─ IRefreshTokenService.cs
+│   ├─ IHashingService.cs
+│   ├─ ITokenService.cs
+│   └─ IJwtService.cs
+│
 ├─ Services/
-│   ├─ AuthService.cs
+│   │
+│   ├─ AuthManagerService.cs
 │   ├─ TokenService.cs
 │   └─ RefreshTokenService.cs
 │
@@ -74,122 +170,77 @@ AuthService/
 │   └─ TokenGenerator.cs
 │
 ├─ Program.cs
-└─ appsettings.json
+└─ appsettings.json</pre>
 
 ---
 
-# Auth Flow
+## Authentication Flow
 
-## Register
-- Create user
-- Hash password (BCrypt)
-- Store in DB
+### Register
 
-## Login
-- Validate credentials
-- Issue JWT + refresh token
+1. Receive email and password  
+2. Hash password using BCrypt  
+3. Store user in database  
 
-## API Access
-- JWT sent in Authorization header
-- Services validate token
+### Login
 
-## Refresh
-- Validate refresh token
-- Rotate tokens
-- Revoke old token
+1. Validate credentials  
+2. Generate JWT  
+3. Generate refresh token  
+4. Return authentication response  
 
-## Logout
-- Revoke refresh token
+### API Access
 
----
+- JWT is sent in Authorization header  
+- API Gateway validates token  
+- Request is forwarded to services  
 
-# Security
+### Refresh Token
 
-- BCrypt password hashing  
-- JWT (short-lived access tokens ~15 min)  
-- Refresh token rotation  
-- Token reuse detection  
-- SHA256 hashed refresh tokens in DB  
-- HTTPS required  
+- Validate refresh token  
+- Rotate refresh token  
+- Revoke previous token  
+- Issue new JWT  
 
----
+### Logout
 
-# JWT
-
-- Contains user ID + claims  
-- Signed with secret key  
-- Short expiration time  
-- Supports key rotation (kid concept)  
+- Revoke refresh token  
+- End session  
 
 ---
-
-# Refresh Token Model
-
-- TokenHash  
-- UserId  
-- ExpiresAt  
-- CreatedAt  
-- Revoked  
-- ReplacedByToken  
-- FamilyId  
-
----
-
-# Rate Limiting
-
-Handled at API Gateway:
-
-- Login: strict limit (5/min)  
-- General API: higher limit (100/min)  
-
----
-
-# API Gateway Responsibilities
-
-- Routing to services  
-- JWT validation  
-- Rate limiting  
-- Centralized logging  
-
----
-
-# Key Rotation
-
-- Multiple signing keys supported  
-- Tokens include key ID (kid)  
-- Old keys remain valid during rotation period  
-
----
-
-# Features
-
-## Authentication
-- Register / Login  
-- JWT issuance  
-- Refresh token system  
-- Logout  
-
-## Sessions
-- Multi-device support  
-- Token tracking per family  
-- Revocation support  
 
 ## Security
-- Password hashing  
-- Token hashing  
-- Stateless design  
+
+- BCrypt password hashing  
+- Short-lived JWT (~15 minutes)  
+- Refresh token rotation  
+- Refresh token reuse detection  
+- SHA256 hashed refresh tokens stored in DB  
+- HTTPS required  
+- JWT key rotation support (`kid`)  
 
 ---
 
-# Database
+## JWT
 
-## User
+- Contains user ID and claims  
+- Signed using secret key  
+- Short expiration time  
+- Supports key rotation via `kid`  
+
+---
+
+## Database Schema
+
+### User
+
 - Id  
 - Email  
 - PasswordHash  
 - CreatedAt  
 
-## RefreshToken
+### RefreshToken
+
 - TokenHash  
 - UserId  
 - ExpiresAt  
@@ -197,11 +248,3 @@ Handled at API Gateway:
 - Revoked  
 - ReplacedByToken  
 - FamilyId  
-
----
-
-# Run Locally
-
-dotnet restore  
-dotnet ef database update  
-dotnet run  

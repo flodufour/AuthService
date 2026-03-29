@@ -1,7 +1,6 @@
 ﻿using AuthService.Data;
 using AuthService.DTO;
 using AuthService.Models;
-using AuthService.Security;
 using Microsoft.EntityFrameworkCore;
 using AuthService.Interfaces;
 
