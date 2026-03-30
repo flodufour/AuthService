@@ -53,8 +53,6 @@ builder.Services.AddSwaggerGen(options =>
     });
 });
 
-
-
 builder.Services.AddDbContext<AppDbContext>(options =>
     options.UseMySql(
         builder.Configuration.GetConnectionString("DefaultConnection"),
@@ -62,13 +60,13 @@ builder.Services.AddDbContext<AppDbContext>(options =>
     )
 );
 
-
 builder.Services.AddScoped<IHashingService, HashingService>();
 builder.Services.AddScoped<IJwtService, JwtService>();
 builder.Services.AddScoped<ITokenGenerator, TokenGenerator>();
 builder.Services.AddScoped<IRefreshTokenService, RefreshTokenService>();
 builder.Services.AddScoped<ITokenService, TokenService>();
 builder.Services.AddScoped<IAuthManager, AuthManager>();
+builder.Services.AddScoped<IPasswordPolicyService, PasswordPolicyService>();
 
 var jwtKey = builder.Configuration["Jwt:Key"];
 var key = Encoding.UTF8.GetBytes(jwtKey);

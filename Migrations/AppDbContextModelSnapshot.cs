@@ -71,9 +71,34 @@ namespace AuthService.Migrations
                         .IsRequired()
                         .HasColumnType("varchar(255)");
 
+                    b.Property<string>("EmailVerificationToken")
+                        .HasColumnType("longtext");
+
+                    b.Property<int>("FailedLoginAttempts")
+                        .HasColumnType("int");
+
+                    b.Property<bool>("IsEmailVerified")
+                        .HasColumnType("tinyint(1)");
+
+                    b.Property<DateTime?>("LastLogin")
+                        .HasColumnType("datetime(6)");
+
+                    b.Property<DateTime?>("LockedUntil")
+                        .HasColumnType("datetime(6)");
+
+                    b.Property<string>("NormalizedEmail")
+                        .IsRequired()
+                        .HasColumnType("longtext");
+
                     b.Property<string>("PasswordHash")
                         .IsRequired()
                         .HasColumnType("longtext");
+
+                    b.Property<string>("PasswordResetToken")
+                        .HasColumnType("longtext");
+
+                    b.Property<DateTime?>("PasswordResetTokenExpiry")
+                        .HasColumnType("datetime(6)");
 
                     b.HasKey("Id");
 

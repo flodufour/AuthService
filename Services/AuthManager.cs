@@ -13,33 +13,45 @@ namespace AuthService.Services
         private readonly IHashingService _hashingService;
         private readonly ITokenService _tokenService;
         private readonly IRefreshTokenService _refreshTokenService;
+        private readonly IPasswordPolicyService _passwordPolicyService;
 
         public AuthManager(
             AppDbContext context,
             IHashingService hashingService,
             ITokenService tokenService,
-            IRefreshTokenService refreshTokenService)
+            IRefreshTokenService refreshTokenService,
+            IPasswordPolicyService passwordPolicyService)
         {
             _context = context;
             _hashingService = hashingService;
             _tokenService = tokenService;
             _refreshTokenService = refreshTokenService;
+            _passwordPolicyService = passwordPolicyService;
         }
 
         public async Task<AuthResponse> RegisterAsync(RegisterRequest request)
         {
+            var normalizedEmail = request.Email.ToUpper();
+
             var existingUser = await _context.Users
-                .FirstOrDefaultAsync(x => x.Email == request.Email);
+                .FirstOrDefaultAsync(x => x.NormalizedEmail == normalizedEmail);
 
             if (existingUser != null)
                 throw new Exception("User already exists");
+
+            var validation = _passwordPolicyService.Validate(request.Password);
+
+            if (!validation.IsValid)
+                throw new Exception(string.Join(", ", validation.Errors));
 
             var user = new User
             {
                 Id = Guid.NewGuid(),
                 Email = request.Email,
+                NormalizedEmail = request.Email.ToUpper(),
                 PasswordHash = _hashingService.HashPassword(request.Password),
-                CreatedAt = DateTime.UtcNow
+                CreatedAt = DateTime.UtcNow,
+                IsEmailVerified = false
             };
 
             _context.Users.Add(user);
@@ -71,6 +83,10 @@ namespace AuthService.Services
                 throw new Exception("Invalid credentials");
 
             var familyId = Guid.NewGuid().ToString();
+
+            user.LastLogin = DateTime.UtcNow;
+            user.FailedLoginAttempts = 0;
+            await _context.SaveChangesAsync();
 
             return await _tokenService.CreateTokensAsync(
                 user.Id,
@@ -112,6 +128,24 @@ namespace AuthService.Services
         public async Task LogoutAsync(LogoutRequest request)
         {
             await _refreshTokenService.LogoutAsync(request.RefreshToken);
+        }
+
+        public async Task<MeResponse> GetCurrentUserAsync(Guid userId)
+        {
+            var user = await _context.Users
+                .FirstOrDefaultAsync(u => u.Id == userId);
+
+            if (user == null)
+                throw new Exception("User not found");
+
+            return new MeResponse
+            {
+                Id = user.Id,
+                Email = user.Email,
+                IsEmailVerified = user.IsEmailVerified,
+                CreatedAt = user.CreatedAt,
+                LastLogin = user.LastLogin
+            };
         }
     }
 }

@@ -43,9 +43,20 @@ namespace AuthService.Migrations
                     Id = table.Column<Guid>(type: "char(36)", nullable: false, collation: "ascii_general_ci"),
                     Email = table.Column<string>(type: "varchar(255)", nullable: false)
                         .Annotation("MySql:CharSet", "utf8mb4"),
+                    NormalizedEmail = table.Column<string>(type: "longtext", nullable: false)
+                        .Annotation("MySql:CharSet", "utf8mb4"),
                     PasswordHash = table.Column<string>(type: "longtext", nullable: false)
                         .Annotation("MySql:CharSet", "utf8mb4"),
-                    CreatedAt = table.Column<DateTime>(type: "datetime(6)", nullable: false)
+                    IsEmailVerified = table.Column<bool>(type: "tinyint(1)", nullable: false),
+                    CreatedAt = table.Column<DateTime>(type: "datetime(6)", nullable: false),
+                    LastLogin = table.Column<DateTime>(type: "datetime(6)", nullable: true),
+                    FailedLoginAttempts = table.Column<int>(type: "int", nullable: false),
+                    LockedUntil = table.Column<DateTime>(type: "datetime(6)", nullable: true),
+                    EmailVerificationToken = table.Column<string>(type: "longtext", nullable: true)
+                        .Annotation("MySql:CharSet", "utf8mb4"),
+                    PasswordResetToken = table.Column<string>(type: "longtext", nullable: true)
+                        .Annotation("MySql:CharSet", "utf8mb4"),
+                    PasswordResetTokenExpiry = table.Column<DateTime>(type: "datetime(6)", nullable: true)
                 },
                 constraints: table =>
                 {

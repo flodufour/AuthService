@@ -3,6 +3,7 @@ using AuthService.Interfaces;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using System.Reflection;
+using System.Security.Claims;
 
 namespace AuthService.Controllers
 {
@@ -73,6 +74,23 @@ namespace AuthService.Controllers
             {
                 return BadRequest(new { message = ex.Message });
             }
+        }
+
+
+        [Authorize]
+        [HttpGet("me")]
+        public async Task<IActionResult> Me()
+        {
+            var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+
+            if (string.IsNullOrEmpty(userIdClaim))
+                return Unauthorized();
+
+            var userId = Guid.Parse(userIdClaim);
+
+            var result = await _authManager.GetCurrentUserAsync(userId);
+
+            return Ok(result);
         }
 
         [AllowAnonymous]

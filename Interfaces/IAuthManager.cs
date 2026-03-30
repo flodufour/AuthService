@@ -8,5 +8,6 @@ namespace AuthService.Interfaces
         Task<AuthResponse> LoginAsync(LoginRequest request);
         Task<AuthResponse> RefreshAsync(RefreshTokenRequest request);
         Task LogoutAsync(LogoutRequest request);
+        Task<MeResponse> GetCurrentUserAsync(Guid userId);
     }
 }
