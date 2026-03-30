@@ -1,4 +1,14 @@
-﻿# CHANGELOG
+﻿# TODO
+- Add email verification
+- Add password reset functionality
+- Add commenting and documentation to the codebase
+
+# CHANGELOG
+
+## AuthService V 2.0.0 [Unreleased]
+### ADDED
+### FIXED
+- Fixed dupplication bug in authManager
 
 ## AuthService V 1.1.0 [30/03/26]
 ### ADDED
@@ -9,14 +19,13 @@
 ### FIXED
 - Cleaned up unused using directives
 - Fixed naming inconsistencies in AuthController
-- updated README.md 
+- Updated README.md 
 
 ## AuthService V 1.0.2 [29/03/26]
 ### ADDED
 - Added interfaces for the services
 ### FIXED	
 - AuthService.Service.AuthService renamed to AuthService.Service.AuthManager
-
 
 ## AuthService V 1.0.1 [29/03/26]
 ### ADDED

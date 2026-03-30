@@ -31,7 +31,7 @@ namespace AuthService.Services
 
         public async Task<AuthResponse> RegisterAsync(RegisterRequest request)
         {
-            var normalizedEmail = request.Email.ToUpper();
+            var normalizedEmail = request.Email.Trim().ToUpperInvariant();
 
             var existingUser = await _context.Users
                 .FirstOrDefaultAsync(x => x.NormalizedEmail == normalizedEmail);
@@ -48,7 +48,7 @@ namespace AuthService.Services
             {
                 Id = Guid.NewGuid(),
                 Email = request.Email,
-                NormalizedEmail = request.Email.ToUpper(),
+                NormalizedEmail = normalizedEmail,
                 PasswordHash = _hashingService.HashPassword(request.Password),
                 CreatedAt = DateTime.UtcNow,
                 IsEmailVerified = false
