@@ -1,5 +1,6 @@
 ﻿using AuthService.Data;
 using AuthService.DTO;
+using AuthService.Exceptions;
 using AuthService.Models;
 using Microsoft.EntityFrameworkCore;
 using AuthService.Interfaces;
@@ -40,12 +41,12 @@ namespace AuthService.Services
                 .FirstOrDefaultAsync(x => x.NormalizedEmail == normalizedEmail);
 
             if (existingUser != null)
-                throw new Exception("User already exists");
+                throw new AuthException("User already exists");
 
             var validation = _passwordPolicyService.Validate(request.Password);
 
             if (!validation.IsValid)
-                throw new Exception(string.Join(", ", validation.Errors));
+                throw new AuthException(string.Join(", ", validation.Errors));
 
             var user = new User
             {
@@ -75,10 +76,10 @@ namespace AuthService.Services
                 .FirstOrDefaultAsync(x => x.Email == request.Email);
 
             if (user == null)
-                throw new Exception("Invalid credentials");
+                throw new AuthException("Invalid credentials");
 
             if (user.LockedUntil.HasValue && user.LockedUntil.Value > DateTime.UtcNow)
-                throw new Exception("Account is temporarily locked. Try again later.");
+                throw new AuthException("Account is temporarily locked. Try again later.");
 
             var isValid = _hashingService.VerifyPassword(
                 request.Password,
@@ -91,7 +92,7 @@ namespace AuthService.Services
                 if (user.FailedLoginAttempts >= 5)
                     user.LockedUntil = DateTime.UtcNow.AddMinutes(15);
                 await _context.SaveChangesAsync();
-                throw new Exception("Invalid credentials");
+                throw new AuthException("Invalid credentials");
             }
 
             var familyId = Guid.NewGuid().ToString();
@@ -114,13 +115,13 @@ namespace AuthService.Services
                 .ValidateTokenAsync(request.RefreshToken);
 
             if (storedToken == null)
-                throw new Exception("Invalid refresh token");
+                throw new AuthException("Invalid refresh token");
 
             var user = await _context.Users
                 .FirstOrDefaultAsync(x => x.Id == storedToken.UserId);
 
             if (user == null)
-                throw new Exception("User not found");
+                throw new AuthException("User not found");
 
             var newRefreshToken = _tokenGenerator.GenerateRefreshToken();
 
@@ -149,7 +150,7 @@ namespace AuthService.Services
                 .FirstOrDefaultAsync(u => u.Id == userId);
 
             if (user == null)
-                throw new Exception("User not found");
+                throw new AuthException("User not found");
 
             return new MeResponse
             {

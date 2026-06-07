@@ -1,4 +1,5 @@
 ﻿using AuthService.DTO;
+using AuthService.Exceptions;
 using AuthService.Interfaces;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -27,7 +28,7 @@ namespace AuthService.Controllers
                 var result = await _authManager.RegisterAsync(request);
                 return Ok(result);
             }
-            catch (Exception ex)
+            catch (AuthException ex)
             {
                 return BadRequest(new { message = ex.Message });
             }
@@ -42,7 +43,7 @@ namespace AuthService.Controllers
                 var result = await _authManager.LoginAsync(request);
                 return Ok(result);
             }
-            catch (Exception ex)
+            catch (AuthException ex)
             {
                 return Unauthorized(new { message = ex.Message });
             }
@@ -56,7 +57,7 @@ namespace AuthService.Controllers
                 var result = await _authManager.RefreshAsync(request);
                 return Ok(result);
             }
-            catch (Exception ex)
+            catch (AuthException ex)
             {
                 return Unauthorized(new { message = ex.Message });
             }
@@ -70,7 +71,7 @@ namespace AuthService.Controllers
                 await _authManager.LogoutAsync(request);
                 return Ok(new { message = "Logged out successfully" });
             }
-            catch (Exception ex)
+            catch (AuthException ex)
             {
                 return BadRequest(new { message = ex.Message });
             }
