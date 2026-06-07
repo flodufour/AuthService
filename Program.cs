@@ -81,12 +81,12 @@ var app = builder.Build();
 
 if (app.Environment.IsDevelopment())
 {
-    app.MapOpenApi();
+    app.MapOpenApi().AllowAnonymous();
     app.MapScalarApiReference(options =>
     {
         options.Title = "AuthService API";
         options.DefaultHttpClient = new(ScalarTarget.CSharp, ScalarClient.HttpClient);
-    });
+    }).AllowAnonymous();
 }
 
 app.Use(async (context, next) =>
@@ -95,6 +95,10 @@ app.Use(async (context, next) =>
     await next();
 });
 
+if (!app.Environment.IsDevelopment())
+{
+    app.UseHsts();
+}
 app.UseHttpsRedirection();
 
 app.UseAuthentication();
