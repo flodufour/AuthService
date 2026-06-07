@@ -17,6 +17,10 @@ public class AppDbContext : DbContext
             .HasIndex(u => u.Email)
             .IsUnique();
 
+        modelBuilder.Entity<User>()
+            .HasIndex(u => u.NormalizedEmail)
+            .IsUnique();
+
         modelBuilder.Entity<RefreshToken>()
             .HasIndex(r => r.TokenHash);
     }
