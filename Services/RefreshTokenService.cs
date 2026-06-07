@@ -58,7 +58,10 @@ namespace AuthService.Services
                 return null;
 
             if (storedToken.Revoked)
+            {
+                await RevokeFamilyAsync(storedToken.FamilyId);
                 return null;
+            }
 
             if (storedToken.ExpiresAt < DateTime.UtcNow)
                 return null;
