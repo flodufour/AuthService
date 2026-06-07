@@ -10,7 +10,7 @@ Stateless authentication microservice for API Gateway architectures. Handles use
 - **Entity Framework Core 9** — ORM
 - **MySQL** — Database (via Pomelo)
 - **BCrypt** — Password hashing
-- **JWT (HMAC-SHA256)** — Access tokens
+- **JWT (RS256 — asymmetric)** — Access tokens
 - **Scalar** — API documentation (development only)
 
 ---
@@ -27,6 +27,7 @@ Stateless authentication microservice for API Gateway architectures. Handles use
 | POST | `/auth/forgot-password` | Public | Request password reset |
 | POST | `/auth/reset-password` | Public | Reset password |
 | GET | `/auth/me` | Bearer | Get current user profile |
+| GET | `/.well-known/jwks.json` | Public | Public key set (JWKS) |
 
 ---
 
@@ -50,7 +51,7 @@ Stateless authentication microservice for API Gateway architectures. Handles use
 3. Account lockout check (`LockedUntil`)
 4. BCrypt verification
 5. On failure: increment `FailedLoginAttempts` → lock for 15 min after 5 attempts
-6. On success: issue JWT + refresh token (isolated family)
+6. On success: issue JWT (RS256) + refresh token (isolated family)
 
 ### Token Refresh
 1. Token validated (hash + expiry + not revoked)
@@ -71,6 +72,7 @@ Stateless authentication microservice for API Gateway architectures. Handles use
 | Measure | Detail |
 |---|---|
 | Password hashing | BCrypt |
+| JWT algorithm | RS256 (asymmetric — RSA 2048-bit) |
 | JWT lifetime | 15 minutes |
 | Refresh token rotation | On every renewal |
 | Token theft detection | Revokes entire token family on reuse |
@@ -86,12 +88,60 @@ Stateless authentication microservice for API Gateway architectures. Handles use
 
 ---
 
+## JWT — RS256 (Asymmetric)
+
+AuthService uses **RS256** instead of the common symmetric HMAC-SHA256.
+
+```
+AuthService   signs with RSA private key    →  JWT
+OtherService  verifies with RSA public key  →  ✅ or ❌
+```
+
+**Why this matters:** Other services only need the public key to validate tokens. Even if a consuming service is compromised, the attacker cannot forge tokens — they only have the public key, which cannot sign anything.
+
+### JWKS Endpoint
+
+The public key is exposed as a standard JSON Web Key Set at:
+
+```
+GET /.well-known/jwks.json
+```
+
+Other services can consume it automatically:
+
+```csharp
+// In any other ASP.NET Core service
+builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
+    .AddJwtBearer(options =>
+    {
+        options.Authority = "https://your-authservice-url";
+        // Automatically fetches /.well-known/jwks.json and caches the public key
+        // Re-fetches when the key rotates
+    });
+```
+
+No shared secret. No manual key distribution.
+
+### Key Rotation
+
+To rotate the RSA key pair:
+
+```bash
+openssl genrsa -out private.pem 2048
+openssl rsa -in private.pem -pubout -out public.pem
+```
+
+Update `Jwt__PrivateKey` and `Jwt__PublicKey` in production. Existing tokens signed with the old key will be rejected immediately — all active sessions will require re-login.
+
+---
+
 ## Project Structure
 
 ```
 AuthService/
 ├── Controllers/
-│   └── AuthController.cs
+│   ├── AuthController.cs
+│   └── WellKnownController.cs   ← serves /.well-known/jwks.json
 ├── Data/
 │   └── AppDbContext.cs
 ├── DTO/
@@ -132,7 +182,7 @@ AuthService/
 │   └── TokenService.cs
 ├── Program.cs
 ├── appsettings.json
-└── appsettings.Development.json 
+└── appsettings.Development.json  ← gitignored
 ```
 
 ---
@@ -182,7 +232,8 @@ AuthService/
     "DefaultConnection": "server=...;database=authservice;user=...;password=..."
   },
   "Jwt": {
-    "Key": "<min 32 characters>",
+    "PrivateKey": "-----BEGIN PRIVATE KEY-----\n<key>\n-----END PRIVATE KEY-----",
+    "PublicKey": "-----BEGIN PUBLIC KEY-----\n<key>\n-----END PUBLIC KEY-----",
     "Issuer": "AuthService",
     "Audience": "ApiGateway",
     "ExpiryMinutes": 15
@@ -197,13 +248,17 @@ AuthService/
 
 ```
 ConnectionStrings__DefaultConnection=...
-Jwt__Key=<freshly generated key — never reuse a key from source control>
+Jwt__PrivateKey=-----BEGIN PRIVATE KEY-----\nMIIE...\n-----END PRIVATE KEY-----
+Jwt__PublicKey=-----BEGIN PUBLIC KEY-----\nMIIB...\n-----END PUBLIC KEY-----
 Cors__AllowedOrigins__0=https://yourapp.com
 ```
 
-Generate a secure key:
+**Why `\n` in environment variables:** Environment variables are plain strings — the shell does not interpret escape sequences. The `\n` here is a literal backslash + n. The application replaces them with real newlines before parsing the PEM key. Some platforms (Docker Compose, Kubernetes secrets) support injecting actual newlines, in which case the `\n` replacement is not needed.
+
+Generate a new RSA key pair:
 ```bash
-openssl rand -hex 32
+openssl genrsa -out private.pem 2048
+openssl rsa -in private.pem -pubout -out public.pem
 ```
 
 ---
@@ -237,3 +292,5 @@ dotnet run
 ```
 
 API documentation: `http://localhost:5121/scalar/v1`
+
+JWKS: `http://localhost:5121/.well-known/jwks.json`

@@ -1,6 +1,6 @@
-﻿using System.IdentityModel.Tokens.Jwt;
+using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
-using System.Text;
+using System.Security.Cryptography;
 using Microsoft.IdentityModel.Tokens;
 using AuthService.Interfaces;
 
@@ -17,19 +17,21 @@ namespace AuthService.Security
 
         public string GenerateToken(Guid userId, string email)
         {
-            var key = new SymmetricSecurityKey(
-                Encoding.UTF8.GetBytes(_config["Jwt:Key"]!)
-            );
+            var privateKeyPem = _config["Jwt:PrivateKey"]!.Replace("\\n", "\n");
 
-            var creds = new SigningCredentials(key, SecurityAlgorithms.HmacSha256);
+            using var rsa = RSA.Create();
+            rsa.ImportFromPem(privateKeyPem);
+
+            var key = new RsaSecurityKey(rsa.ExportParameters(true));
+            var creds = new SigningCredentials(key, SecurityAlgorithms.RsaSha256);
 
             var claims = new[]
             {
-            new Claim(JwtRegisteredClaimNames.Sub, userId.ToString()),
-            new Claim(ClaimTypes.NameIdentifier, userId.ToString()),
-            new Claim(JwtRegisteredClaimNames.Email, email),
-            new Claim(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString())
-        };
+                new Claim(JwtRegisteredClaimNames.Sub, userId.ToString()),
+                new Claim(ClaimTypes.NameIdentifier, userId.ToString()),
+                new Claim(JwtRegisteredClaimNames.Email, email),
+                new Claim(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString())
+            };
 
             var expires = DateTime.UtcNow.AddMinutes(
                 int.Parse(_config["Jwt:ExpiryMinutes"]!)

@@ -10,12 +10,13 @@ using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
 using Scalar.AspNetCore;
 using System.Reflection;
-using System.Text;
+using System.Security.Cryptography;
 using System.Threading.RateLimiting;
 
 var builder = WebApplication.CreateBuilder(args);
 
 builder.Services.AddControllers();
+builder.Services.AddHealthChecks();
 
 var version = Assembly.GetExecutingAssembly()
     .GetCustomAttribute<AssemblyInformationalVersionAttribute>()?
@@ -54,13 +55,16 @@ builder.Services.AddScoped<IAuthManager, AuthManager>();
 builder.Services.AddScoped<IPasswordPolicyService, PasswordPolicyService>();
 builder.Services.AddScoped<IEmailService, ConsoleEmailService>();
 
-var jwtKey = builder.Configuration["Jwt:Key"];
-if (string.IsNullOrEmpty(jwtKey) || jwtKey.Length < 32)
-    throw new InvalidOperationException(
-        "Jwt:Key must be set to a secure value of at least 32 characters. " +
-        "Use the environment variable Jwt__Key in production.");
+var publicKeyPem = builder.Configuration["Jwt:PublicKey"];
+var privateKeyPem = builder.Configuration["Jwt:PrivateKey"];
 
-var key = Encoding.UTF8.GetBytes(jwtKey);
+if (string.IsNullOrEmpty(publicKeyPem) || string.IsNullOrEmpty(privateKeyPem))
+    throw new InvalidOperationException(
+        "Jwt:PublicKey and Jwt:PrivateKey must be configured. " +
+        "Use environment variables Jwt__PublicKey and Jwt__PrivateKey in production.");
+
+var rsaValidation = RSA.Create();
+rsaValidation.ImportFromPem(publicKeyPem.Replace("\\n", "\n"));
 
 builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
     .AddJwtBearer(options =>
@@ -68,7 +72,7 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
         options.TokenValidationParameters = new TokenValidationParameters
         {
             ValidateIssuerSigningKey = true,
-            IssuerSigningKey = new SymmetricSecurityKey(key),
+            IssuerSigningKey = new RsaSecurityKey(rsaValidation),
 
             ValidateIssuer = true,
             ValidIssuer = builder.Configuration["Jwt:Issuer"],
@@ -161,5 +165,6 @@ app.UseAuthorization();
 app.UseRateLimiter();
 
 app.MapControllers();
+app.MapHealthChecks("/health").AllowAnonymous();
 
 app.Run();

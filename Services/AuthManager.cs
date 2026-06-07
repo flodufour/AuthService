@@ -188,6 +188,26 @@ namespace AuthService.Services
             await _context.SaveChangesAsync();
         }
 
+        public async Task ResendVerificationAsync(ResendVerificationRequest request)
+        {
+            var normalizedEmail = request.Email.Trim().ToUpperInvariant();
+
+            var user = await _context.Users
+                .FirstOrDefaultAsync(x => x.NormalizedEmail == normalizedEmail);
+
+            // Always return without error to prevent email enumeration
+            if (user == null || user.IsEmailVerified)
+                return;
+
+            var rawToken = _tokenGenerator.GenerateRefreshToken();
+            user.EmailVerificationToken = _refreshTokenService.HashToken(rawToken);
+            user.EmailVerificationTokenExpiry = DateTime.UtcNow.AddHours(24);
+
+            await _context.SaveChangesAsync();
+
+            await _emailService.SendVerificationEmailAsync(user.Email, rawToken);
+        }
+
         public async Task ForgotPasswordAsync(ForgotPasswordRequest request)
         {
             var normalizedEmail = request.Email.Trim().ToUpperInvariant();

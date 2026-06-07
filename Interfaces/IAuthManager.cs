@@ -12,5 +12,6 @@ namespace AuthService.Interfaces
         Task ForgotPasswordAsync(ForgotPasswordRequest request);
         Task ResetPasswordAsync(ResetPasswordRequest request);
         Task VerifyEmailAsync(VerifyEmailRequest request);
+        Task ResendVerificationAsync(ResendVerificationRequest request);
     }
 }

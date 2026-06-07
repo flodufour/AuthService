@@ -49,3 +49,6 @@ Thumbs.db
 
 appsettings.Development.json
 secrets.json
+# RSA keys
+private.pem
+public.pem

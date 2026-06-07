@@ -116,6 +116,15 @@ namespace AuthService.Controllers
 
         [AllowAnonymous]
         [EnableRateLimiting("sensitive")]
+        [HttpPost("resend-verification")]
+        public async Task<IActionResult> ResendVerification([FromBody] ResendVerificationRequest request)
+        {
+            await _authManager.ResendVerificationAsync(request);
+            return Ok(new { message = "If this email exists and is unverified, a new verification email has been sent." });
+        }
+
+        [AllowAnonymous]
+        [EnableRateLimiting("sensitive")]
         [HttpPost("forgot-password")]
         public async Task<IActionResult> ForgotPassword([FromBody] ForgotPasswordRequest request)
         {
