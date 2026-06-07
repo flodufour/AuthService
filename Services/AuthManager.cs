@@ -74,18 +74,28 @@ namespace AuthService.Services
             if (user == null)
                 throw new Exception("Invalid credentials");
 
+            if (user.LockedUntil.HasValue && user.LockedUntil.Value > DateTime.UtcNow)
+                throw new Exception("Account is temporarily locked. Try again later.");
+
             var isValid = _hashingService.VerifyPassword(
                 request.Password,
                 user.PasswordHash
             );
 
             if (!isValid)
+            {
+                user.FailedLoginAttempts++;
+                if (user.FailedLoginAttempts >= 5)
+                    user.LockedUntil = DateTime.UtcNow.AddMinutes(15);
+                await _context.SaveChangesAsync();
                 throw new Exception("Invalid credentials");
+            }
 
             var familyId = Guid.NewGuid().ToString();
 
             user.LastLogin = DateTime.UtcNow;
             user.FailedLoginAttempts = 0;
+            user.LockedUntil = null;
             await _context.SaveChangesAsync();
 
             return await _tokenService.CreateTokensAsync(
