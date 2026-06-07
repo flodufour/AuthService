@@ -23,12 +23,28 @@ namespace AuthService.Controllers
         [AllowAnonymous]
         [EnableRateLimiting("standard")]
         [HttpPost("register")]
-        public async Task<ActionResult<AuthResponse>> Register([FromBody] RegisterRequest request)
+        public async Task<IActionResult> Register([FromBody] RegisterRequest request)
         {
             try
             {
-                var result = await _authManager.RegisterAsync(request);
-                return Ok(result);
+                await _authManager.RegisterAsync(request);
+                return Ok(new { message = "Registration successful. Please verify your email before logging in." });
+            }
+            catch (AuthException ex)
+            {
+                return BadRequest(new { message = ex.Message });
+            }
+        }
+
+        [AllowAnonymous]
+        [EnableRateLimiting("standard")]
+        [HttpPost("verify-email")]
+        public async Task<IActionResult> VerifyEmail([FromBody] VerifyEmailRequest request)
+        {
+            try
+            {
+                await _authManager.VerifyEmailAsync(request);
+                return Ok(new { message = "Email verified successfully. You can now log in." });
             }
             catch (AuthException ex)
             {

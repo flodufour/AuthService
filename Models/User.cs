@@ -17,6 +17,7 @@
         public DateTime? LockedUntil { get; set; }
 
         public string? EmailVerificationToken { get; set; }
+        public DateTime? EmailVerificationTokenExpiry { get; set; }
 
         public string? PasswordResetToken { get; set; }
         public DateTime? PasswordResetTokenExpiry { get; set; }

@@ -87,6 +87,21 @@ builder.Services.AddAuthorization(options =>
         .Build();
 });
 
+var allowedOrigins = builder.Configuration
+    .GetSection("Cors:AllowedOrigins")
+    .Get<string[]>() ?? [];
+
+builder.Services.AddCors(options =>
+{
+    options.AddPolicy("Default", policy =>
+    {
+        policy.WithOrigins(allowedOrigins)
+              .AllowAnyHeader()
+              .AllowAnyMethod()
+              .AllowCredentials();
+    });
+});
+
 builder.Services.AddRateLimiter(options =>
 {
     // Sensitive endpoints: login, forgot-password, reset-password — 5 req/min per IP
@@ -140,6 +155,7 @@ if (!app.Environment.IsDevelopment())
 }
 app.UseHttpsRedirection();
 
+app.UseCors("Default");
 app.UseAuthentication();
 app.UseAuthorization();
 app.UseRateLimiter();

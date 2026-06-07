@@ -16,5 +16,11 @@ namespace AuthService.Services
             _logger.LogInformation("Password reset token for {Email}: {Token}", toEmail, resetToken);
             return Task.CompletedTask;
         }
+
+        public Task SendVerificationEmailAsync(string toEmail, string verificationToken)
+        {
+            _logger.LogInformation("Email verification token for {Email}: {Token}", toEmail, verificationToken);
+            return Task.CompletedTask;
+        }
     }
 }

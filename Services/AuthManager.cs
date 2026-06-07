@@ -36,7 +36,7 @@ namespace AuthService.Services
             _emailService = emailService;
         }
 
-        public async Task<AuthResponse> RegisterAsync(RegisterRequest request)
+        public async Task RegisterAsync(RegisterRequest request)
         {
             var normalizedEmail = request.Email.Trim().ToUpperInvariant();
 
@@ -61,16 +61,14 @@ namespace AuthService.Services
                 IsEmailVerified = false
             };
 
+            var rawVerificationToken = _tokenGenerator.GenerateRefreshToken();
+            user.EmailVerificationToken = _refreshTokenService.HashToken(rawVerificationToken);
+            user.EmailVerificationTokenExpiry = DateTime.UtcNow.AddHours(24);
+
             _context.Users.Add(user);
             await _context.SaveChangesAsync();
 
-            var familyId = Guid.NewGuid().ToString();
-
-            return await _tokenService.CreateTokensAsync(
-                user.Id,
-                user.Email,
-                familyId
-            );
+            await _emailService.SendVerificationEmailAsync(user.Email, rawVerificationToken);
         }
 
         public async Task<AuthResponse> LoginAsync(LoginRequest request)
@@ -82,6 +80,9 @@ namespace AuthService.Services
 
             if (user == null)
                 throw new AuthException("Invalid credentials");
+
+            if (!user.IsEmailVerified)
+                throw new AuthException("Please verify your email address before logging in.");
 
             if (user.LockedUntil.HasValue && user.LockedUntil.Value > DateTime.UtcNow)
                 throw new AuthException("Account is temporarily locked. Try again later.");
@@ -165,6 +166,26 @@ namespace AuthService.Services
                 CreatedAt = user.CreatedAt,
                 LastLogin = user.LastLogin
             };
+        }
+
+        public async Task VerifyEmailAsync(VerifyEmailRequest request)
+        {
+            var tokenHash = _refreshTokenService.HashToken(request.Token);
+
+            var user = await _context.Users
+                .FirstOrDefaultAsync(x => x.EmailVerificationToken == tokenHash);
+
+            if (user == null)
+                throw new AuthException("Invalid or expired verification token");
+
+            if (user.EmailVerificationTokenExpiry == null || user.EmailVerificationTokenExpiry < DateTime.UtcNow)
+                throw new AuthException("Invalid or expired verification token");
+
+            user.IsEmailVerified = true;
+            user.EmailVerificationToken = null;
+            user.EmailVerificationTokenExpiry = null;
+
+            await _context.SaveChangesAsync();
         }
 
         public async Task ForgotPasswordAsync(ForgotPasswordRequest request)
