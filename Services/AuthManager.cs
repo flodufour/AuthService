@@ -72,8 +72,10 @@ namespace AuthService.Services
 
         public async Task<AuthResponse> LoginAsync(LoginRequest request)
         {
+            var normalizedEmail = request.Email.Trim().ToUpperInvariant();
+
             var user = await _context.Users
-                .FirstOrDefaultAsync(x => x.Email == request.Email);
+                .FirstOrDefaultAsync(x => x.NormalizedEmail == normalizedEmail);
 
             if (user == null)
                 throw new AuthException("Invalid credentials");
