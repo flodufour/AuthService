@@ -1,339 +1,239 @@
-﻿# AuthService
+# AuthService
 
-AuthService is a stateless authentication service for microservices and API Gateway architectures.
-
-The service handles identity, issues JWT tokens, and manages refresh token sessions while delegating all business logic to external services.
+Stateless authentication microservice for API Gateway architectures. Handles user identity, issues JWT access tokens, and manages the full refresh token lifecycle.
 
 ---
 
-## System Overview
+## Stack
 
-AuthService is responsible only for authentication and session management.
-
-1. User registers with email and password  
-2. Password is hashed using BCrypt  
-3. Email verification token is generated and sent  
-4. User verifies email  
-5. User logs in with credentials  
-6. JWT + refresh token are issued  
-7. JWT is used for API access  
-8. Refresh token is used to renew sessions  
-9. Logout revokes refresh tokens  
+- **ASP.NET Core 9** — Web API
+- **Entity Framework Core 9** — ORM
+- **MySQL** — Database (via Pomelo)
+- **BCrypt** — Password hashing
+- **JWT (HMAC-SHA256)** — Access tokens
+- **Scalar** — API documentation (development only)
 
 ---
 
-## System Responsibilities
+## Endpoints
 
-- Authentication (register / login)
-- Email verification workflow
-- Password reset workflow
-- JWT token issuance and validation
-- Refresh token lifecycle management
-- Token rotation and reuse detection
-- Stateless identity handling
-
----
-
-## Architecture
-
-AuthService is designed as an independent service used behind an API Gateway.
-
-### API Gateway Responsibilities
-
-- Request routing  
-- JWT validation  
-- Rate limiting  
-- Centralized logging  
-
-### AuthService Responsibilities
-
-- Identity management  
-- Token generation  
-- Refresh token management  
-- Email verification logic  
-- Password reset logic  
-- Security enforcement  
+| Method | Route | Auth | Description |
+|---|---|---|---|
+| POST | `/auth/register` | Public | Create account |
+| POST | `/auth/verify-email` | Public | Verify email address |
+| POST | `/auth/login` | Public | Login |
+| POST | `/auth/refresh` | Bearer | Rotate refresh token |
+| POST | `/auth/logout` | Bearer | Revoke refresh token |
+| POST | `/auth/forgot-password` | Public | Request password reset |
+| POST | `/auth/reset-password` | Public | Reset password |
+| GET | `/auth/me` | Bearer | Get current user profile |
 
 ---
 
-## Technology Stack
+## Authentication Flows
 
-- ASP.NET Core Web API  
-- Entity Framework Core  
-- MySQL  
-- JWT authentication  
-- BCrypt password hashing  
-
----
-
-## Software Architecture
-
-The project follows a layered clean architecture approach.
-
----
-
-### Core Layer (`Core/` equivalent: Services + Domain logic)
-
-Contains business logic independent of infrastructure:
-
-- Authentication logic
-- Token generation logic
-- Refresh token handling logic
-- Email verification logic
-- Password reset logic
-- Session management
-
----
-
-### Interfaces Layer (`Interfaces/`)
-
-All services expose interfaces defined in a dedicated folder:
-
-- `IAuthManager`
-- `ITokenService`
-- `IRefreshTokenService`
-- `IHashingService`
-- `IPasswordPolicyService`
-- `ITokenGenerator`
-- `IJwtService`
-- `IEmailService`
-- `IEmailVerificationService`
-- `IPasswordResetService`
-
-These interfaces allow implementations to be replaced without affecting higher-level logic.
-
----
-
-### Implementation Layer (`Services/`)
-
-Concrete implementations of interfaces:
-
-- `AuthManager`
-- `TokenService`
-- `RefreshTokenService`
-- `EmailVerificationService`
-- `PasswordResetService`
-- `EmailService`
-
-Responsible for actual authentication workflows and token handling.
-
----
-
-### Data Layer (`Data/`)
-
-- `AppDbContext`
-- Entity Framework Core configuration
-- Database access logic
-
----
-
-### Security Layer (`Security/`)
-
-Handles low-level security operations:
-
-- JWT generation and validation (`JwtService`)
-- Password hashing (`HashingService`)
-- Password policy enforcement (`PasswordPolicyService`)
-- Token utilities (`TokenGenerator`)
-- Email token hashing utilities
-
----
-
-### Controllers Layer (`Controllers/`)
-
-- `AuthController`
-
-Handles HTTP endpoints:
-
-- Register
-- Login
-- Refresh token
-- Logout
-- Verify email
-- Resend email verification
-- Request password reset
-- Reset password
-- Get current user (`/me`)
-
----
-
-## Project Structure
-
-<pre>AuthService/
-│
-├─ Controllers/
-│   └─ AuthController.cs
-│
-├─ Interfaces/
-│   ├─ IAuthManager.cs
-│   ├─ ITokenService.cs
-│   ├─ IRefreshTokenService.cs
-│   ├─ IHashingService.cs
-│   ├─ IPasswordPolicyService.cs
-│   ├─ ITokenGenerator.cs
-│   ├─ IJwtService.cs
-│   ├─ IEmailService.cs
-│   ├─ IEmailVerificationService.cs
-│   └─ IPasswordResetService.cs
-│
-├─ Services/
-│   ├─ AuthManagerService.cs
-│   ├─ TokenService.cs
-│   ├─ RefreshTokenService.cs
-│   ├─ EmailVerificationService.cs
-│   ├─ PasswordResetService.cs
-│   └─ EmailService.cs
-│
-├─ Models/
-│   ├─ User.cs
-│   └─ RefreshToken.cs
-│
-├─ DTOs/
-│   ├─ LoginRequest.cs
-│   ├─ RegisterRequest.cs
-│   ├─ AuthResponse.cs
-│   ├─ RefreshTokenRequest.cs
-│   ├─ LogoutRequest.cs
-│   ├─ MeResponse.cs
-│   ├─ VerifyEmailRequest.cs
-│   ├─ ResendEmailVerificationRequest.cs
-│   ├─ PasswordResetRequest.cs
-│   ├─ ResetPasswordRequest.cs
-│   └─ PasswordValidationResult.cs
-│
-├─ Data/
-│   └─ AppDbContext.cs
-│
-├─ Security/
-│   ├─ JwtService.cs
-│   ├─ HashingService.cs
-│   ├─ PasswordPolicyService.cs
-│   ├─ TokenGenerator.cs
-│   └─ EmailTokenHasher.cs
-│
-├─ Program.cs
-└─ appsettings.json</pre>
-
----
-
-## Authentication Flow
-
-### Register
-
-1. Receive email and password  
-2. Validate password policy  
-3. Hash password using BCrypt  
-4. Create user with `IsEmailVerified = false`  
-5. Generate email verification token  
-6. Store hashed token in database  
-7. Send verification email  
-
----
+### Registration
+1. Password policy validation (min 10 chars, uppercase, lowercase, digit)
+2. BCrypt password hashing
+3. Email verification token generated (512-bit CSPRNG) → stored hashed (SHA-256)
+4. Verification email sent with raw token
+5. Account inactive until email is verified
 
 ### Email Verification
-
-1. User clicks verification link  
-2. Token is sent to API  
-3. Token is hashed and compared  
-4. If valid → user is activated  
-5. Token is invalidated  
-
----
+1. Token received → hashed → compared against database
+2. Expiry checked (24h window)
+3. `IsEmailVerified = true`, token cleared
 
 ### Login
+1. Lookup by `NormalizedEmail` (case-insensitive)
+2. `IsEmailVerified` check
+3. Account lockout check (`LockedUntil`)
+4. BCrypt verification
+5. On failure: increment `FailedLoginAttempts` → lock for 15 min after 5 attempts
+6. On success: issue JWT + refresh token (isolated family)
 
-1. Validate credentials  
-2. Check if email is verified  
-3. Generate JWT  
-4. Generate refresh token  
-5. Return authentication response  
-
----
-
-### API Access
-
-- JWT is sent in Authorization header  
-- API Gateway validates token  
-- Request is forwarded to services  
-
----
-
-### Refresh Token
-
-- Validate refresh token  
-- Rotate refresh token  
-- Revoke previous token  
-- Issue new JWT  
-
----
+### Token Refresh
+1. Token validated (hash + expiry + not revoked)
+2. If a revoked token is presented → entire family revoked (theft detection)
+3. Rotation: old token revoked, new 512-bit token issued
+4. New JWT issued
 
 ### Password Reset
-
-1. User requests password reset  
-2. Reset token is generated and hashed  
-3. Email is sent  
-4. User submits new password + token  
-5. Token is validated and password is updated  
-
----
-
-### Logout
-
-- Revoke refresh token  
-- End session  
+1. `forgot-password`: token generated (512-bit), stored hashed, expiry 1h
+2. Always returns 200 (no email enumeration)
+3. `reset-password`: token + expiry validated, password policy enforced
+4. Password updated, token cleared, all refresh tokens revoked (force re-login on all devices)
 
 ---
 
 ## Security
 
-- BCrypt password hashing  
-- Short-lived JWT (~15 minutes)  
-- Refresh token rotation  
-- Refresh token reuse detection  
-- SHA256 hashed refresh tokens stored in DB  
-- Email verification required before login  
-- Password reset via secure token flow  
-- HTTPS required  
-- JWT key rotation support (`kid`)  
+| Measure | Detail |
+|---|---|
+| Password hashing | BCrypt |
+| JWT lifetime | 15 minutes |
+| Refresh token rotation | On every renewal |
+| Token theft detection | Revokes entire token family on reuse |
+| Token storage | SHA-256 only — never stored in plaintext |
+| Account lockout | 5 failures → 15-minute lock |
+| Email verification | Required before login |
+| Rate limiting | 5 req/min (login, reset) — 20 req/min (register, refresh) |
+| CORS | Explicitly configured origins |
+| HSTS | Enabled in production |
+| Security headers | `X-Content-Type-Options`, `X-Frame-Options`, `Referrer-Policy` |
+| JWT validation | Issuer, Audience, Lifetime, Signing key |
+| API documentation | Scalar — development only (`/scalar/v1`) |
 
 ---
 
-## JWT
+## Project Structure
 
-- Contains user ID and claims  
-- Signed using secret key  
-- Short expiration time  
-- Supports key rotation via `kid`  
+```
+AuthService/
+├── Controllers/
+│   └── AuthController.cs
+├── Data/
+│   └── AppDbContext.cs
+├── DTO/
+│   ├── AuthResponse.cs
+│   ├── ForgotPasswordRequest.cs
+│   ├── LoginRequest.cs
+│   ├── LogoutRequest.cs
+│   ├── MeResponse.cs
+│   ├── PasswordValidationResult.cs
+│   ├── RefreshTokenRequest.cs
+│   ├── RegisterRequest.cs
+│   ├── ResetPasswordRequest.cs
+│   └── VerifyEmailRequest.cs
+├── Exceptions/
+│   └── AuthException.cs
+├── Interfaces/
+│   ├── IAuthManager.cs
+│   ├── IEmailService.cs
+│   ├── IHashingService.cs
+│   ├── IJwtService.cs
+│   ├── IPasswordPolicyService.cs
+│   ├── IRefreshTokenService.cs
+│   ├── ITokenGenerator.cs
+│   └── ITokenService.cs
+├── Migrations/
+├── Models/
+│   ├── RefreshToken.cs
+│   └── User.cs
+├── Security/
+│   ├── HashingService.cs
+│   ├── JwtService.cs
+│   ├── PasswordPolicyService.cs
+│   └── TokenGenerator.cs
+├── Services/
+│   ├── AuthManager.cs
+│   ├── ConsoleEmailService.cs
+│   ├── RefreshTokenService.cs
+│   └── TokenService.cs
+├── Program.cs
+├── appsettings.json
+└── appsettings.Development.json 
+```
 
 ---
 
 ## Database Schema
 
-### User
+### Users
 
-- Id  
-- Email  
-- NormalizedEmail  
-- PasswordHash  
-- IsEmailVerified  
-- CreatedAt  
-- LastLogin  
-- FailedLoginAttempts  
-- LockedUntil  
-- EmailVerificationTokenHash  
-- EmailVerificationTokenExpiry  
-- PasswordResetTokenHash  
-- PasswordResetTokenExpiry  
+| Column | Type | Description |
+|---|---|---|
+| Id | GUID | Primary key |
+| Email | string | Original email (display) |
+| NormalizedEmail | string UNIQUE | Uppercased email (lookups) |
+| PasswordHash | string | BCrypt hash |
+| IsEmailVerified | bool | Email verification status |
+| CreatedAt | datetime | Account creation date |
+| LastLogin | datetime? | Last successful login |
+| FailedLoginAttempts | int | Consecutive failed logins |
+| LockedUntil | datetime? | Lockout expiry |
+| EmailVerificationToken | string? | SHA-256 hashed token |
+| EmailVerificationTokenExpiry | datetime? | 24h expiry |
+| PasswordResetToken | string? | SHA-256 hashed token |
+| PasswordResetTokenExpiry | datetime? | 1h expiry |
+
+### RefreshTokens
+
+| Column | Type | Description |
+|---|---|---|
+| Id | GUID | Primary key |
+| UserId | GUID | FK → Users |
+| TokenHash | string | SHA-256 of raw token |
+| FamilyId | string | Token family (rotation chain) |
+| CreatedAt | datetime | Creation date |
+| ExpiresAt | datetime | 7-day expiry |
+| Revoked | bool | Revocation status |
+| ReplacedByToken | string? | Hash of the next token |
 
 ---
 
-### RefreshToken
+## Configuration
 
-- Id  
-- TokenHash  
-- UserId  
-- ExpiresAt  
-- CreatedAt  
-- Revoked  
-- ReplacedByToken  
-- FamilyId  
+### Development (`appsettings.Development.json`)
+
+```json
+{
+  "ConnectionStrings": {
+    "DefaultConnection": "server=...;database=authservice;user=...;password=..."
+  },
+  "Jwt": {
+    "Key": "<min 32 characters>",
+    "Issuer": "AuthService",
+    "Audience": "ApiGateway",
+    "ExpiryMinutes": 15
+  },
+  "Cors": {
+    "AllowedOrigins": ["http://localhost:3000"]
+  }
+}
+```
+
+### Production (environment variables)
+
+```
+ConnectionStrings__DefaultConnection=...
+Jwt__Key=<freshly generated key — never reuse a key from source control>
+Cors__AllowedOrigins__0=https://yourapp.com
+```
+
+Generate a secure key:
+```bash
+openssl rand -hex 32
+```
+
+---
+
+## Email Service
+
+In development, `ConsoleEmailService` logs tokens to the console output.
+
+For production, implement `IEmailService`:
+
+```csharp
+public class SendGridEmailService : IEmailService
+{
+    public Task SendPasswordResetEmailAsync(string toEmail, string token) { ... }
+    public Task SendVerificationEmailAsync(string toEmail, string token) { ... }
+}
+```
+
+Then swap the registration in `Program.cs`:
+```csharp
+builder.Services.AddScoped<IEmailService, SendGridEmailService>();
+```
+
+---
+
+## Running Locally
+
+```bash
+dotnet ef database update
+dotnet run
+```
+
+API documentation: `http://localhost:5121/scalar/v1`
