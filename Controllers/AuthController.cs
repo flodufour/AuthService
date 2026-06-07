@@ -3,6 +3,7 @@ using AuthService.Exceptions;
 using AuthService.Interfaces;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.RateLimiting;
 using System.Reflection;
 using System.Security.Claims;
 
@@ -20,6 +21,7 @@ namespace AuthService.Controllers
         }
 
         [AllowAnonymous]
+        [EnableRateLimiting("standard")]
         [HttpPost("register")]
         public async Task<ActionResult<AuthResponse>> Register([FromBody] RegisterRequest request)
         {
@@ -35,6 +37,7 @@ namespace AuthService.Controllers
         }
 
         [AllowAnonymous]
+        [EnableRateLimiting("sensitive")]
         [HttpPost("login")]
         public async Task<ActionResult<AuthResponse>> Login([FromBody] LoginRequest request)
         {
@@ -49,6 +52,7 @@ namespace AuthService.Controllers
             }
         }
 
+        [EnableRateLimiting("standard")]
         [HttpPost("refresh")]
         public async Task<ActionResult<AuthResponse>> Refresh([FromBody] RefreshTokenRequest request)
         {
@@ -92,6 +96,31 @@ namespace AuthService.Controllers
             var result = await _authManager.GetCurrentUserAsync(userId);
 
             return Ok(result);
+        }
+
+        [AllowAnonymous]
+        [EnableRateLimiting("sensitive")]
+        [HttpPost("forgot-password")]
+        public async Task<IActionResult> ForgotPassword([FromBody] ForgotPasswordRequest request)
+        {
+            await _authManager.ForgotPasswordAsync(request);
+            return Ok(new { message = "If this email exists, a reset link has been sent." });
+        }
+
+        [AllowAnonymous]
+        [EnableRateLimiting("sensitive")]
+        [HttpPost("reset-password")]
+        public async Task<IActionResult> ResetPassword([FromBody] ResetPasswordRequest request)
+        {
+            try
+            {
+                await _authManager.ResetPasswordAsync(request);
+                return Ok(new { message = "Password updated successfully." });
+            }
+            catch (AuthException ex)
+            {
+                return BadRequest(new { message = ex.Message });
+            }
         }
 
         [AllowAnonymous]

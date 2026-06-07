@@ -16,6 +16,7 @@ namespace AuthService.Services
         private readonly IRefreshTokenService _refreshTokenService;
         private readonly IPasswordPolicyService _passwordPolicyService;
         private readonly ITokenGenerator _tokenGenerator;
+        private readonly IEmailService _emailService;
 
         public AuthManager(
             AppDbContext context,
@@ -23,7 +24,8 @@ namespace AuthService.Services
             ITokenService tokenService,
             IRefreshTokenService refreshTokenService,
             IPasswordPolicyService passwordPolicyService,
-            ITokenGenerator tokenGenerator)
+            ITokenGenerator tokenGenerator,
+            IEmailService emailService)
         {
             _context = context;
             _hashingService = hashingService;
@@ -31,6 +33,7 @@ namespace AuthService.Services
             _refreshTokenService = refreshTokenService;
             _passwordPolicyService = passwordPolicyService;
             _tokenGenerator = tokenGenerator;
+            _emailService = emailService;
         }
 
         public async Task<AuthResponse> RegisterAsync(RegisterRequest request)
@@ -162,6 +165,61 @@ namespace AuthService.Services
                 CreatedAt = user.CreatedAt,
                 LastLogin = user.LastLogin
             };
+        }
+
+        public async Task ForgotPasswordAsync(ForgotPasswordRequest request)
+        {
+            var normalizedEmail = request.Email.Trim().ToUpperInvariant();
+
+            var user = await _context.Users
+                .FirstOrDefaultAsync(x => x.NormalizedEmail == normalizedEmail);
+
+            // Always return without error to prevent email enumeration
+            if (user == null)
+                return;
+
+            var rawToken = _tokenGenerator.GenerateRefreshToken();
+
+            user.PasswordResetToken = _refreshTokenService.HashToken(rawToken);
+            user.PasswordResetTokenExpiry = DateTime.UtcNow.AddHours(1);
+
+            await _context.SaveChangesAsync();
+
+            await _emailService.SendPasswordResetEmailAsync(user.Email, rawToken);
+        }
+
+        public async Task ResetPasswordAsync(ResetPasswordRequest request)
+        {
+            var tokenHash = _refreshTokenService.HashToken(request.Token);
+
+            var user = await _context.Users
+                .FirstOrDefaultAsync(x => x.PasswordResetToken == tokenHash);
+
+            if (user == null)
+                throw new AuthException("Invalid or expired reset token");
+
+            if (user.PasswordResetTokenExpiry == null || user.PasswordResetTokenExpiry < DateTime.UtcNow)
+                throw new AuthException("Invalid or expired reset token");
+
+            var validation = _passwordPolicyService.Validate(request.NewPassword);
+            if (!validation.IsValid)
+                throw new AuthException(string.Join(", ", validation.Errors));
+
+            user.PasswordHash = _hashingService.HashPassword(request.NewPassword);
+            user.PasswordResetToken = null;
+            user.PasswordResetTokenExpiry = null;
+
+            // Revoke all active refresh tokens so all sessions must re-authenticate
+            var families = await _context.RefreshTokens
+                .Where(t => t.UserId == user.Id && !t.Revoked)
+                .Select(t => t.FamilyId)
+                .Distinct()
+                .ToListAsync();
+
+            foreach (var familyId in families)
+                await _refreshTokenService.RevokeFamilyAsync(familyId);
+
+            await _context.SaveChangesAsync();
         }
     }
 }

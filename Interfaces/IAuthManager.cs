@@ -9,5 +9,7 @@ namespace AuthService.Interfaces
         Task<AuthResponse> RefreshAsync(RefreshTokenRequest request);
         Task LogoutAsync(LogoutRequest request);
         Task<MeResponse> GetCurrentUserAsync(Guid userId);
+        Task ForgotPasswordAsync(ForgotPasswordRequest request);
+        Task ResetPasswordAsync(ResetPasswordRequest request);
     }
 }
