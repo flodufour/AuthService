@@ -24,10 +24,10 @@ namespace AuthService.Security
             if (!password.Any(char.IsDigit))
                 result.Errors.Add("Missing number");
 
-            var commonPasswords = new[] { "Password123" };
+            var commonPasswords = new[] { "password123" };
 
             if (commonPasswords.Contains(password.ToLower()))
-                result.Errors.Add("You deserve to be hacked");
+                result.Errors.Add("Password is too common");
                 
             result.IsValid = !result.Errors.Any();
 
