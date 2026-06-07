@@ -14,19 +14,22 @@ namespace AuthService.Services
         private readonly ITokenService _tokenService;
         private readonly IRefreshTokenService _refreshTokenService;
         private readonly IPasswordPolicyService _passwordPolicyService;
+        private readonly ITokenGenerator _tokenGenerator;
 
         public AuthManager(
             AppDbContext context,
             IHashingService hashingService,
             ITokenService tokenService,
             IRefreshTokenService refreshTokenService,
-            IPasswordPolicyService passwordPolicyService)
+            IPasswordPolicyService passwordPolicyService,
+            ITokenGenerator tokenGenerator)
         {
             _context = context;
             _hashingService = hashingService;
             _tokenService = tokenService;
             _refreshTokenService = refreshTokenService;
             _passwordPolicyService = passwordPolicyService;
+            _tokenGenerator = tokenGenerator;
         }
 
         public async Task<AuthResponse> RegisterAsync(RegisterRequest request)
@@ -119,7 +122,7 @@ namespace AuthService.Services
             if (user == null)
                 throw new Exception("User not found");
 
-            var newRefreshToken = Guid.NewGuid().ToString();
+            var newRefreshToken = _tokenGenerator.GenerateRefreshToken();
 
             await _refreshTokenService.RotateTokenAsync(
                 storedToken,
